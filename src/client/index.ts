@@ -8,11 +8,17 @@ async function main() {
   const conn = await amqp.connect(rabbitConnString);
   const username = await clientWelcome();
 
+  
   const queueChannelTuple = await declareAndBind(conn, 
                                     ExchangePerilDirect, 
                                     `pause.${username}`, 
                                     PauseKey,
                                     SimpleQueueType.Transient);
+
+  process.on("SIGINT", () => {
+    console.log("Shutting down game client");
+    conn.close();
+  });
 
   console.log("Starting Peril client...");
 }
