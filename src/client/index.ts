@@ -2,6 +2,7 @@ import amqp from "amqplib";
 import { clientWelcome } from "../internal/gamelogic/gamelogic.js";
 import { SimpleQueueType, declareAndBind } from "../internal/pubsub/queue.js";
 import { ExchangePerilDirect, PauseKey } from "../internal/routing/routing.js";
+import { handleError } from "../internal/lib/errorHandler.js";
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
@@ -17,7 +18,7 @@ async function main() {
 
   process.on("SIGINT", () => {
     console.log("Shutting down game client");
-    conn.close();
+    conn.close().catch(handleError);
   });
 
   console.log("Starting Peril client...");
@@ -28,10 +29,3 @@ main().catch((err) => {
   process.exit(1);
 });
 
-function handleError(err: Error) {
-  if (err instanceof Error) {
-    console.log(`Error: ${err.message}`);
-  } else {
-    console.log(err);
-  }
-}
