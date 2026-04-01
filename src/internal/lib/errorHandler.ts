@@ -1,4 +1,4 @@
-export function handleError(err: Error) {
+export function handleError(err: any) {
   if (err instanceof Error) {
     console.log(`Error: ${err.message}`);
   } else {

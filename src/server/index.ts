@@ -43,7 +43,7 @@ async function main() {
     conn.close().catch(handleError);
   });
 
-  console.log("Starting Peril server...");
+  // console.log("Starting Peril server...");
 }
 
 main().catch((err) => {
