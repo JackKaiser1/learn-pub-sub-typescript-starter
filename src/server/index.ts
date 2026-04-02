@@ -1,13 +1,17 @@
 import amqp from "amqplib";
 import { publishJSON } from "../internal/pubsub/publish.js";
-import { ExchangePerilDirect, PauseKey } from "../internal/routing/routing.js";
+import { ExchangePerilDirect, PauseKey, ExchangePerilTopic, GameLogSlug } from "../internal/routing/routing.js";
 import { type PlayingState } from "../internal/gamelogic/gamestate.js";
 import { printServerHelp, getInput } from "../internal/gamelogic/gamelogic.js";
 import { handleError } from "../internal/lib/errorHandler.js";
+import { declareAndBind, SimpleQueueType } from "../internal/pubsub/queue.js";
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
   const conn = await amqp.connect(rabbitConnString);
+
+  const queueChannelTuple = await declareAndBind(conn, ExchangePerilTopic, GameLogSlug, "game_logs.*", SimpleQueueType.Durable);
+
   const confirmChannel1 = await conn.createConfirmChannel();
 
   console.log("Connection successfull");
@@ -35,7 +39,6 @@ async function main() {
       console.log("Command not recognized");
     }
   }
-
 
 
   process.on("SIGINT", () => {
