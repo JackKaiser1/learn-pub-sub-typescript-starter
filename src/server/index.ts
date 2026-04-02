@@ -4,7 +4,7 @@ import { ExchangePerilDirect, PauseKey, ExchangePerilTopic, GameLogSlug } from "
 import { type PlayingState } from "../internal/gamelogic/gamestate.js";
 import { printServerHelp, getInput } from "../internal/gamelogic/gamelogic.js";
 import { handleError } from "../internal/lib/errorHandler.js";
-import { declareAndBind, SimpleQueueType } from "../internal/pubsub/queue.js";
+import { declareAndBind, SimpleQueueType } from "../internal/pubsub/consume.js";
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
