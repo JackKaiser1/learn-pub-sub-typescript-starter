@@ -24,12 +24,17 @@ async function main() {
 
   const state = new GameState(username);
 
-  subscribeJSON(conn, 
+  try {
+    await subscribeJSON(conn, 
     ExchangePerilDirect, 
     queueName, 
     PauseKey, 
     SimpleQueueType.Transient, 
     handlerPause(state));
+  } catch (err) {
+    handleError(err);
+  }
+  
 
   while (true) {
     const words = await getInput();
