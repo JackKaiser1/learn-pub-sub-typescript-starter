@@ -1,40 +1,43 @@
 import amqp from "amqplib";
 import { clientWelcome, getInput, commandStatus, printClientHelp, printQuit } from "../internal/gamelogic/gamelogic.js";
 import { SimpleQueueType, declareAndBind, subscribeJSON} from "../internal/pubsub/consume.js";
-import { ExchangePerilDirect, PauseKey } from "../internal/routing/routing.js";
+import { ExchangePerilDirect, ExchangePerilTopic, PauseKey, ArmyMovesPrefix } from "../internal/routing/routing.js";
 import { handleError } from "../internal/lib/errorHandler.js";
 import { GameState } from "../internal/gamelogic/gamestate.js";
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
 import { commandMove } from "../internal/gamelogic/move.js";
 import { constrainedMemory } from "process";
-import { handlerPause } from "./handlers.js";
+import { handlerPause, handlerPlayerMove } from "./handlers.js";
+import { publishJSON } from "../internal/pubsub/publish.js";
+
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
   const conn = await amqp.connect(rabbitConnString);
   const username = await clientWelcome();
-  const queueName = `pause.${username}`;
-  
-  const queueChannelTuple = await declareAndBind(conn, 
-                                    ExchangePerilDirect, 
-                                    queueName, 
-                                    PauseKey,
-                                    SimpleQueueType.Transient);
+  const publishChannel = await conn.createConfirmChannel();
 
+  const queueNameDirect = `pause.${username}`;
+
+  const queueNameTopic = `${ArmyMovesPrefix}.${username}`;
+  const queueTopicKey = `${ArmyMovesPrefix}.*`;
 
   const state = new GameState(username);
 
-  try {
-    await subscribeJSON(conn, 
+  await subscribeJSON(conn, 
     ExchangePerilDirect, 
-    queueName, 
+    queueNameDirect, 
     PauseKey, 
     SimpleQueueType.Transient, 
     handlerPause(state));
-  } catch (err) {
-    handleError(err);
-  }
   
+  await subscribeJSON(conn, 
+    ExchangePerilTopic,
+    queueNameTopic,
+    queueTopicKey,
+    SimpleQueueType.Transient,
+    handlerPlayerMove(state),
+  );
 
   while (true) {
     const words = await getInput();
@@ -51,7 +54,13 @@ async function main() {
     }
     else if (cmd == "move") {
       try {
-        commandMove(state, words);
+        publishJSON(publishChannel,
+                    ExchangePerilTopic,
+                    queueTopicKey,
+                    commandMove(state, words),
+        );
+
+        console.log("--Move published--");
       } catch (err) {
         handleError(err);
       }

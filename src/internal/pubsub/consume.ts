@@ -42,9 +42,6 @@ export async function subscribeJSON<T>(
     handler: (data: T) => void,
 ): Promise<void> {
     const [channel, queue] = await declareAndBind(conn, exchange, queueName, key, queueType);
-    if (!channel || !queue) {
-        throw new Error("Could not find queue");
-    }
 
     channel.consume(queueName, (message: amqp.ConsumeMessage | null) => {
         if (message === null) return;
