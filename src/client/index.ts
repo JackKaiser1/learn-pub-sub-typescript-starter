@@ -1,13 +1,13 @@
 import amqp from "amqplib";
 import { clientWelcome, getInput, commandStatus, printClientHelp, printQuit } from "../internal/gamelogic/gamelogic.js";
 import { SimpleQueueType, declareAndBind, subscribeJSON} from "../internal/pubsub/consume.js";
-import { ExchangePerilDirect, ExchangePerilTopic, PauseKey, ArmyMovesPrefix } from "../internal/routing/routing.js";
+import { ExchangePerilDirect, ExchangePerilTopic, PauseKey, ArmyMovesPrefix , WarRecognitionsPrefix} from "../internal/routing/routing.js";
 import { handleError } from "../internal/lib/errorHandler.js";
 import { GameState } from "../internal/gamelogic/gamestate.js";
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
 import { commandMove } from "../internal/gamelogic/move.js";
 import { constrainedMemory } from "process";
-import { handlerPause, handlerPlayerMove } from "./handlers.js";
+import { handlerPause, handlerPlayerMove, handlerConsumeWarMessage } from "./handlers.js";
 import { publishJSON } from "../internal/pubsub/publish.js";
 
 
@@ -36,7 +36,15 @@ async function main() {
     queueNameTopic,
     queueTopicKey,
     SimpleQueueType.Transient,
-    handlerPlayerMove(state),
+    handlerPlayerMove(state, publishChannel),
+  );
+
+  await subscribeJSON(conn,
+    ExchangePerilTopic,
+    "war",
+    `${WarRecognitionsPrefix}.*`,
+    SimpleQueueType.Durable,
+    handlerConsumeWarMessage(state),
   );
 
   while (true) {

@@ -47,14 +47,15 @@ export async function subscribeJSON<T>(
     queueName: string,
     key: string,
     queueType: SimpleQueueType,
-    handler: (data: T) => Acktype,
+    handler: (data: T) => Promise<Acktype> | Acktype,
 ): Promise<void> {
     const [channel, queue] = await declareAndBind(conn, exchange, queueName, key, queueType);
 
-    channel.consume(queueName, (message: amqp.ConsumeMessage | null) => {
+    channel.consume(queueName, async (message: amqp.ConsumeMessage | null) => {
         if (message === null) return;
         const parsedMessage = JSON.parse(message.content.toString("utf-8"));
-        const acktype = handler(parsedMessage);
+        const acktype = await handler(parsedMessage);
+        // process.stdout.write("> ");
 
         switch (acktype) {
             case Acktype.Ack:
