@@ -22,7 +22,7 @@ export async function declareAndBind(
 ): Promise<[Channel, amqp.Replies.AssertQueue]> {
     const channel = await conn.createChannel();
 
-    let options: Object;
+    let options: { [key: string]: any };
 
     switch (queueType) {
         case SimpleQueueType.Durable: 
@@ -32,6 +32,8 @@ export async function declareAndBind(
             options = { autoDelete: true, exclusive: true };
             break;
     }
+
+    options.arguments = { "x-dead-letter-exchange": "peril_dlx" };
 
     const queue = await channel.assertQueue(queueName, options);
     await channel.bindQueue(queueName, exchange, key);
