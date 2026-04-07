@@ -3,13 +3,14 @@ import { handlePause } from "../internal/gamelogic/pause.js";
 import { type ArmyMove, type Player } from "../internal/gamelogic/gamedata.js";
 import { handleMove, MoveOutcome } from "../internal/gamelogic/move.js";
 import { Acktype, declareAndBind, SimpleQueueType } from "../internal/pubsub/consume.js";
-import { publishJSON } from "../internal/pubsub/publish.js";
+import { publishJSON, publishMsgPack } from "../internal/pubsub/publish.js";
 import { type Channel } from "amqplib";
 import amqp from "amqplib";
 import { channel } from "diagnostics_channel";
-import { ExchangePerilTopic, WarRecognitionsPrefix } from "../internal/routing/routing.js";
+import { ExchangePerilTopic, GameLogSlug, WarRecognitionsPrefix } from "../internal/routing/routing.js";
 import { WarOutcome, type WarResolution, handleWar } from "../internal/gamelogic/war.js";
 import { handleError } from "../internal/lib/errorHandler.js";
+import { publishGameLog } from "./index.js";
 
 export type RecognitionOfWar = {
     attacker: Player;
@@ -53,7 +54,7 @@ export function handlerPlayerMove(gs: GameState, ch: amqp.ConfirmChannel): (move
     };
 }
 
-export function handlerConsumeWarMessage(gs: GameState) {
+export function handlerConsumeWarMessage(gs: GameState, ch: amqp.ConfirmChannel) {
     return async (rw: RecognitionOfWar) => {
         const outcome = handleWar(gs, rw);
 
@@ -66,10 +67,28 @@ export function handlerConsumeWarMessage(gs: GameState) {
             return Acktype.NackDiscard;
         }
         else if (outcome.result === WarOutcome.OpponentWon) {
-            return Acktype.Ack;
+            try {
+                await publishGameLog(ch, gs.getUsername(), `${outcome.winner} won a war against ${outcome.loser}`);
+                return Acktype.Ack;
+            } catch (err) {
+                return Acktype.NackRequeue;
+            }
         }
         else if (outcome.result === WarOutcome.YouWon) {
-            return Acktype.Ack;
+            try {
+                await publishGameLog(ch, gs.getUsername(), `${outcome.winner} won a war against ${outcome.loser}`);
+                return Acktype.Ack;     
+            } catch (err) {
+                return Acktype.NackRequeue;
+            }
+        }
+        else if (outcome.result === WarOutcome.Draw) {
+            try {
+                await publishGameLog(ch, gs.getUsername(), `${outcome.attacker} and ${outcome.defender} resulted in a draw`);
+                return Acktype.Ack;
+            } catch (err) {
+                return Acktype.NackRequeue;
+            }
         }
         else {
             console.log("Outcome not recognized");

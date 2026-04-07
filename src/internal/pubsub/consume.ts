@@ -55,20 +55,16 @@ export async function subscribeJSON<T>(
         if (message === null) return;
         const parsedMessage = JSON.parse(message.content.toString("utf-8"));
         const acktype = await handler(parsedMessage);
-        // process.stdout.write("> ");
 
         switch (acktype) {
             case Acktype.Ack:
                 channel.ack(message);
-                console.log("Message acknowledged");
                 return;
             case Acktype.NackRequeue:
                 channel.nack(message, false, true);
-                console.log("Message negative acknowledged - requeue");
                 return;
             case Acktype.NackDiscard:
                 channel.nack(message, false, false);
-                console.log("Message negative acknowledged - discard");
                 return;
         }
     });
