@@ -11,6 +11,7 @@ import { ExchangePerilTopic, GameLogSlug, WarRecognitionsPrefix } from "../inter
 import { WarOutcome, type WarResolution, handleWar } from "../internal/gamelogic/war.js";
 import { handleError } from "../internal/lib/errorHandler.js";
 import { publishGameLog } from "./index.js";
+import { type GameLog, writeLog } from "../internal/gamelogic/logs.js";
 
 export type RecognitionOfWar = {
     attacker: Player;
@@ -92,6 +93,18 @@ export function handlerConsumeWarMessage(gs: GameState, ch: amqp.ConfirmChannel)
         }
         else {
             console.log("Outcome not recognized");
+            return Acktype.NackDiscard;
+        }
+    };
+}
+
+export function handlerLogs(): (log: GameLog) => Promise<Acktype> {
+    return async (log: GameLog) => {
+        try {
+            await writeLog(log);
+            console.log("> ");
+            return Acktype.Ack;
+        } catch (err) {
             return Acktype.NackDiscard;
         }
     };

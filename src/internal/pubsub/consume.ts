@@ -1,6 +1,8 @@
 import amqp from "amqplib";
 import { type Channel } from "amqplib";
 import { TextDecoder } from "node:util";
+import { decode } from "@msgpack/msgpack";
+import { type GameLog } from "../gamelogic/logs.js";
 
 export enum SimpleQueueType {
     Durable,
@@ -58,6 +60,41 @@ export async function subscribeJSON<T>(
 
         switch (acktype) {
             case Acktype.Ack:
+                channel.ack(message);
+                return;
+            case Acktype.NackRequeue:
+                channel.nack(message, false, true);
+                return;
+            case Acktype.NackDiscard:
+                channel.nack(message, false, false);
+                return;
+        }
+    });
+}
+
+export async function subscribeMsgPack<T>(
+    conn: amqp.ChannelModel,
+    exchange: string,
+    queueName: string,
+    key: string,
+    queueType: SimpleQueueType,
+    handler: (data: T) => Promise<Acktype> | Acktype, 
+): Promise<void> {
+    const [ channel ] = await declareAndBind(conn, exchange, queueName, key, queueType);
+
+    channel.consume(queueName, async (message: amqp.ConsumeMessage | null) => {
+        if (message === null) return;
+
+        const decodedMessage = decode(message.content) as any;
+        if (!decodedMessage.username
+            || !decodedMessage.message
+            || !decodedMessage.currentTime
+        ) return;
+
+        const acktype = await handler(decodedMessage);
+
+        switch (acktype) {
+            case Acktype.Ack: 
                 channel.ack(message);
                 return;
             case Acktype.NackRequeue:

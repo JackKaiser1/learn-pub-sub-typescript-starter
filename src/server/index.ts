@@ -4,13 +4,22 @@ import { ExchangePerilDirect, PauseKey, ExchangePerilTopic, GameLogSlug } from "
 import { type PlayingState } from "../internal/gamelogic/gamestate.js";
 import { printServerHelp, getInput } from "../internal/gamelogic/gamelogic.js";
 import { handleError } from "../internal/lib/errorHandler.js";
-import { declareAndBind, SimpleQueueType } from "../internal/pubsub/consume.js";
+import { declareAndBind, SimpleQueueType, subscribeMsgPack } from "../internal/pubsub/consume.js";
+import { handlerLogs } from "../client/handlers.js";
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
   const conn = await amqp.connect(rabbitConnString);
 
-  const queueChannelTuple = await declareAndBind(conn, ExchangePerilTopic, GameLogSlug, "game_logs.*", SimpleQueueType.Durable);
+  subscribeMsgPack(conn,
+    ExchangePerilTopic,
+    GameLogSlug,
+    `${GameLogSlug}.*`,
+    SimpleQueueType.Durable,
+    handlerLogs(),
+  );
+
+  // const queueChannelTuple = await declareAndBind(conn, ExchangePerilTopic, GameLogSlug, "game_logs.*", SimpleQueueType.Durable);
 
   const confirmChannel1 = await conn.createConfirmChannel();
 
