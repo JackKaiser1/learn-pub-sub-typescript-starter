@@ -11,6 +11,7 @@ import { handlerPause, handlerPlayerMove, handlerConsumeWarMessage } from "./han
 import { publishJSON } from "../internal/pubsub/publish.js";
 import { type GameLog } from "../internal/gamelogic/logs.js";
 import { publishMsgPack } from "../internal/pubsub/publish.js";
+import { getMaliciousLog } from "../internal/gamelogic/gamelogic.js";
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
@@ -53,6 +54,7 @@ async function main() {
     if (!words.length) continue;
 
     const cmd = words[0];
+    
 
     if (cmd === "spawn") {
       try {
@@ -81,6 +83,25 @@ async function main() {
       printClientHelp();
     } 
     else if (cmd === "spam") {
+      const arg = words[1];
+      if (!arg) {
+        console.log("Usage: spam <number>");
+        continue;
+      }
+
+      const spamNum = parseInt(arg);
+
+      for (let i = 0; i < spamNum + 1; i++) {
+        const logMessage = getMaliciousLog();
+
+        await publishGameLog(publishChannel, 
+          username, 
+          logMessage,
+        );
+      }
+
+
+
       console.log("Spamming not allowed yet!");
     }
     else if (cmd === "quit") {

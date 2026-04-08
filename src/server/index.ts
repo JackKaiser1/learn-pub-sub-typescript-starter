@@ -5,7 +5,7 @@ import { type PlayingState } from "../internal/gamelogic/gamestate.js";
 import { printServerHelp, getInput } from "../internal/gamelogic/gamelogic.js";
 import { handleError } from "../internal/lib/errorHandler.js";
 import { declareAndBind, SimpleQueueType, subscribeMsgPack } from "../internal/pubsub/consume.js";
-import { handlerLogs } from "../client/handlers.js";
+import { handlerLogs } from "../server/handlers.js";
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
@@ -24,6 +24,11 @@ async function main() {
   const confirmChannel1 = await conn.createConfirmChannel();
 
   console.log("Connection successfull");
+
+  if (!process.stdin.isTTY) {
+    console.log("Non-interactive mode: skipping command input.");
+    return;
+  }
 
   printServerHelp();
 

@@ -98,14 +98,14 @@ export function handlerConsumeWarMessage(gs: GameState, ch: amqp.ConfirmChannel)
     };
 }
 
-export function handlerLogs(): (log: GameLog) => Promise<Acktype> {
-    return async (log: GameLog) => {
-        try {
-            await writeLog(log);
-            console.log("> ");
-            return Acktype.Ack;
-        } catch (err) {
-            return Acktype.NackDiscard;
-        }
-    };
-}
+// export function handlerLogs(): (log: GameLog) => Promise<Acktype> {
+//     return async (log: GameLog) => {
+//         try {
+//             await writeLog(log);
+//             console.log("> ");
+//             return Acktype.Ack;
+//         } catch (err) {
+//             return Acktype.NackDiscard;
+//         }
+//     };
+// }
